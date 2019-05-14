@@ -8,7 +8,7 @@ import dolfin as df
 
 eps = 1e-9
 
-dx = 200.0
+dx = 300.0
 dy = 5.0
 dz = 5.0
 
@@ -20,7 +20,7 @@ x1 = x0 + dx
 y1 = y0 + dy
 z1 = z0 + dz
 
-nx = 200
+nx = 500
 ny = 20
 nz = 20
 
@@ -47,8 +47,8 @@ def plot_FEM_results(phi, elec):
     as well as the potential in the center along the z-axis (depth)
     """
 
-    x = np.linspace(x0, x1, 201)
-    z = np.linspace(0, 5, 100)
+    x = np.linspace(x0, x1, 501)
+    z = np.linspace(0, 5, 21)
 
     mea_x_values = np.zeros(len(x))
     # analytic = np.zeros(len(x))
@@ -69,16 +69,16 @@ def plot_FEM_results(phi, elec):
     # ax1 = fig.add_subplot(131, aspect=1, ylabel='z [mm]', xlabel='x [mm]', title='Set up')
     ax2 = fig.add_subplot(211, aspect=1, ylabel='z [mm]', xlabel='x [mm]',
                           title='Field cross section')
-    ax3 = fig.add_subplot(212, xlabel='x [mm]', ylabel='Field strength')
+    ax3 = fig.add_subplot(212, xlabel='x [mm]', ylabel='Field strength', ylim=[-0.6, 0.6])
 
     img1 = ax2.imshow(phi_plane.T, interpolation='nearest', origin='lower', #cmap='bwr',
-                      extent=(x[0], x[-1], z[0], z[-1]))
+                      extent=(x[0], x[-1], z[0], z[-1]), vmax=0.6, vmin=-0.6)
 
-    plt.colorbar(img1)
+    plt.colorbar(img1, ax=ax2)
     l, = ax3.plot(x, mea_x_values,  lw=2, c='g')
     # l2, = ax3.plot(x, analytic,  lw=2, c='k', ls='--')
 
-    plt.savefig(join(fem_fig_folder, 'results_{}_elec_{}.png'.format(sim_name, elec)))
+    plt.savefig(join(fem_fig_folder, 'results_{}_t_idx_{}.png'.format(sim_name, elec)))
 
 def refine_mesh(mesh):
 
@@ -107,7 +107,7 @@ class RightTunnel(df.SubDomain):
         return df.near(x[0], x1)
 
 
-electrodes = np.arange(-50, 51)
+# electrodes = np.arange(-50, 51, 5)#np.arange(-50, 51, 2)
 
 # Initialize sub-domain instances
 left = LeftTunnel()
@@ -122,9 +122,11 @@ print(mesh.num_cells())
 mesh_coordinates = mesh.coordinates()
 
 np.save(join(out_folder, "mesh_coordinates.npy"), mesh_coordinates)
-np.save(join(out_folder, "electrodes.npy"), electrodes)
+# np.save(join(out_folder, "electrodes.npy"), electrodes)
 
 source_pos = np.load(join(out_folder, "source_pos.npy"))
+imem = np.load(join(out_folder, "axon_imem.npy"))
+num_tsteps = imem.shape[1]
 num_sources = source_pos.shape[0]
 
 # closest_idxs = np.ones(num_sources, dtype=int)
@@ -161,8 +163,10 @@ L = df.Constant(0) * v * dx
 # Define Dirichlet boundary conditions at top and bottom boundaries
 bcs = [df.DirichletBC(V, 0.0, boundaries, 1)]
 
-for elec in range(len(electrodes)):
-    print(elec)
+
+for t_idx in range(num_tsteps):
+# for elec in range(len(electrodes)):
+    print(t_idx)
     phi = df.Function(V)
     A = df.assemble(a)
     b = df.assemble(L)
@@ -170,18 +174,20 @@ for elec in range(len(electrodes)):
     [bc.apply(A, b) for bc in bcs]
 
     # Adding point source of magnitude 1.0
-    point = df.Point(electrodes[elec], 0.0, 0.0)
-    delta = df.PointSource(V, point, 1.0)
-    delta.apply(b)
+    for s_idx, s_pos in enumerate(source_pos):
+
+        point = df.Point(s_pos[0], s_pos[1], s_pos[2])
+        delta = df.PointSource(V, point, imem[s_idx, t_idx])
+        delta.apply(b)
 
     df.solve(A, phi.vector(), b, 'cg', "ilu")
     phi_sources = np.zeros(num_sources)
-    for s_idx, s_pos in enumerate(source_pos):
-        phi_sources[s_idx] = phi(s_pos[0], s_pos[1], s_pos[2])
+    # for s_idx, s_pos in enumerate(source_pos):
+    #     phi_sources[s_idx] = phi(s_pos[0], s_pos[1], s_pos[2])
 
-    np.save(join(out_folder, "phi_sources_elec_{}.npy".format(elec)), phi_sources)
-    np.save(join(out_folder, "phi_elec_{}.npy".format(elec)), phi.vector())
+    # np.save(join(out_folder, "phi_sources_elec_{}.npy".format(elec)), phi_sources)
+    np.save(join(out_folder, "phi_t_vec_{}.npy".format(t_idx)), phi.vector())
 
-    plot_FEM_results(phi, elec)
+    plot_FEM_results(phi, t_idx)
 
 
