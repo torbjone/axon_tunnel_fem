@@ -1,0 +1,15 @@
+Simple toy example of potential from axon in tunnel.
+
+A neural simulation of an axon (Hodgkin-Huxley type) can be executed by:
+python neural_simulation.py
+The positions and transmembrane currents are saved to file.
+
+All Finite Element simulations are done by running:
+python electrode_mapping_FEM.py
+
+This will find the FEM solution for a point source at each of the electrode positions. 
+Because of the reciprocity principle, this can be used as a mapping for finding the potential at the electrodes for an arbitrary distribution
+of point currents in the simulated region.
+
+Based on the neural simulation and the FEM simulation, the predicted potential at the MEA plane can be found by running:
+python calculate_mea_potential.py 
