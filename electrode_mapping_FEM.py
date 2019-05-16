@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib
 matplotlib.use("AGG")
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 import dolfin as df
 
 eps = 1e-9
@@ -20,7 +21,7 @@ x1 = x0 + dx_tunnel
 y1 = y0 + dy_tunnel
 z1 = z0 + dz_tunnel
 
-nx = 200
+nx = 300
 ny = 10
 nz = 10
 
@@ -34,6 +35,7 @@ fem_fig_folder = "fem_figs"
 
 source_pos = np.load(join(out_folder, "source_pos.npy"))
 imem = np.load(join(out_folder, "axon_imem.npy"))
+tvec = np.load(join(out_folder, "axon_tvec.npy"))
 num_tsteps = imem.shape[1]
 num_sources = source_pos.shape[0]
 
@@ -74,41 +76,54 @@ def plot_FEM_results(phi, elec):
         for y_idx in range(len(y)):
             phi_plane_xy[x_idx, y_idx] = phi(x[x_idx], y[y_idx], 0.0 + eps)
 
-
     plt.close("all")
     fig = plt.figure(figsize=[18, 9])
-    # fig.suptitle('Charge positions:\n%s' % (str(charge_pos)))
-    fig.subplots_adjust(wspace=0.5, bottom=0.25, top=0.85)
-    # ax1 = fig.add_subplot(131, aspect=1, ylabel='z [mm]', xlabel='x [mm]', title='Set up')
+    fig.subplots_adjust(hspace=0.9, bottom=0.07, top=0.97, left=0.2)
 
     ax_setup = fig.add_subplot(511, aspect=1, xlabel='x [$\mu$m]', ylabel='z [$\mu$m]',
-                          title='Axon and tunnel')
+                          title='Axon (green) and tunnel (gray)', xlim=[x0 - 5, x1 + 5], ylim=[z0 - 5, z1 + 5])
+
+    axon_center_idx = np.argmin(np.abs(source_pos[:, 0] - 0))
+
+    imem_max = np.max(np.abs(imem))
+    ax_imem_temporal = fig.add_axes([0.05, 0.8, 0.08, 0.1], xlabel='Time [ms]', ylabel='nA',
+                                    xlim=[0, tvec[-1]], ylim=[-imem_max, imem_max],
+                          title='Transmembrane currents\n(x=0)')
+
+    ax_imem_spatial = fig.add_subplot(512, xlabel='x [$\mu$m]', ylabel='nA',
+                                      ylim=[-imem_max, imem_max],
+                          title='Transmembrane currents across axon', xlim=[x0 - 5, x1 + 5])
 
     ax1 = fig.add_subplot(513, aspect=1, xlabel='x [$\mu$m]', ylabel='y [$\mu$m]',
-                          title='Potential cross section')
+                          title='Potential cross section (z=0)')
 
-    ax2 = fig.add_subplot(514, aspect=1, xlabel='x [$\mu$m]', ylabel='z [$\mu$m]', )
+    ax2 = fig.add_subplot(514, aspect=1, xlabel='x [$\mu$m]', ylabel='z [$\mu$m]',
+                          title='Potential cross section (y=0)')
 
-    ax3 = fig.add_subplot(515, xlabel='x [$\mu$m]', ylabel='MEA potential (mV)', ylim=[-1.5, 1.5])
+    ax3 = fig.add_subplot(515, xlabel='x [$\mu$m]', ylabel='MEA potential (mV)',
+                          ylim=[-1.5, 1.5], xlim=[x0 - 5, x1 + 5])
 
-    import matplotlib.patches as mpatches
-    rect = mpatches.Rectangle([x0, z0], dx_tunnel, dz_tunnel, ec="k", fc='gray')
-
+    #  Draw set up with tunnel and axon
+    rect = mpatches.Rectangle([x0, z0], dx_tunnel, dz_tunnel, ec="k", fc='0.8')
     ax_setup.add_patch(rect)
+
+    ax_setup.plot(source_pos[:, 0], source_pos[:, 2], c='g', lw=2)
+    ax_imem_temporal.plot(tvec, imem[axon_center_idx, :])
+    ax_imem_temporal.axvline(tvec[t_idx], c='gray', ls="--")
+
+    ax_imem_spatial.plot(source_pos[:, 0], imem[:, t_idx])
 
     img1 = ax1.imshow(phi_plane_xy.T, interpolation='nearest', origin='lower', cmap='bwr',
                       extent=(x[0], x[-1], y[0], y[-1]), vmax=1.5, vmin=-1.5)
     img2 = ax2.imshow(phi_plane_xz.T, interpolation='nearest', origin='lower', cmap='bwr',
                       extent=(x[0], x[-1], z[0], z[-1]), vmax=1.5, vmin=-1.5)
 
-    cax = fig.add_axes([0.95, 0.85, 0.01, 0.1])
+    cax = fig.add_axes([0.95, 0.5, 0.01, 0.1])
 
-    plt.colorbar(img1, cax=cax)
-    l, = ax3.plot(x, mea_x_values,  lw=2, c='g')
-    # l2, = ax3.plot(x, analytic,  lw=2, c='k', ls='--')
+    plt.colorbar(img1, cax=cax, label="mV")
+    l, = ax3.plot(x, mea_x_values,  lw=2, c='k')
 
     plt.savefig(join(fem_fig_folder, 'results_{}_t_idx_{}.png'.format(sim_name, elec)))
-
 
 
 
@@ -192,7 +207,7 @@ L = df.Constant(0) * v * dx
 bcs = [df.DirichletBC(V, 0.0, boundaries, 1)]
 
 
-for t_idx in range(num_tsteps)[64:65]:
+for t_idx in range(num_tsteps):
 
     print(t_idx)
     phi = df.Function(V)
