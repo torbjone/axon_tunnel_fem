@@ -10,9 +10,9 @@ import dolfin as df
 eps = 1e-9
 
 # Define set up, corresponding to axon tunnel
-dx_tunnel = 300.0  # um
-dy_tunnel = 5.0
-dz_tunnel = 5.0
+dx_tunnel = 100.0  # um
+dy_tunnel = 100.0
+dz_tunnel = 100.0
 
 x0 = -dx_tunnel / 2
 y0 = -dy_tunnel / 2
@@ -22,34 +22,34 @@ x1 = x0 + dx_tunnel
 y1 = y0 + dy_tunnel
 z1 = z0 + dz_tunnel
 
-nx = 300  # Number of points in mesh. Larger number gives more accuracy, but is computationally demanding
-ny = 10
-nz = 10
+nx = 100  # Number of points in mesh. Larger number gives more accuracy, but is computationally demanding
+ny = 100
+nz = 100
 
 sigma = 0.3  # Extracellular conductivity (S/m)
 
 
-out_folder = 'results'
+out_folder = 'results_control'
 sim_name = "tunnel_test"
-fem_fig_folder = "fem_figs"
+fem_fig_folder = "fem_figs_control"
 [os.makedirs(f, exist_ok=True) for f in [out_folder, fem_fig_folder]]
 
-# Loading results from neural simulation, from running "python neural_simulation.py" in terminal
-source_pos = np.load(join(out_folder, "source_pos.npy"))
-imem = np.load(join(out_folder, "axon_imem.npy"))
-tvec = np.load(join(out_folder, "axon_tvec.npy"))
+# example values for validation
+source_pos = np.array([0, 0, 20], [0, 0, 20])
+imem = np.array([[-1.], [1.0]])
+tvec = np.array([0.])
 num_tsteps = imem.shape[1]
 num_sources = source_pos.shape[0]
 
 
-# def analytic_mea(x, y, z):
-#     phi = 0
-#     for idx in range(len(magnitudes)):
-#         r = np.sqrt((x - charge_pos[idx, 0])**2 +
-#                     (y - charge_pos[idx, 1])**2 +
-#                     (z - charge_pos[idx, 2])**2)
-#         phi += magnitudes[idx] / (2 * sigma * np.pi * r)
-#     return phi
+def analytic_mea(x, y, z):
+    phi = 0
+    for idx in range(len(imem)):
+        r = np.sqrt((x - source_pos[idx, 0])**2 +
+                    (y - source_pos[idx, 1])**2 +
+                    (z - source_pos[idx, 2])**2)
+        phi += imem[idx] / (2 * sigma * np.pi * r)
+    return phi
 
 
 def plot_FEM_results(phi, t_idx):
