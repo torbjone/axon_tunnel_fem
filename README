@@ -1,5 +1,7 @@
 Simple toy example of potential from axon in tunnel.
 
+An animation of the results is included under "fem_axon_tunnel.avi" 
+
 A neural simulation of an axon (based on axon model from Hallermann et al. 2012).
 First the NEURON mechanisms must be compiled by executing 'nrnivmodl' in the folder HallermannEtAl2012.
 This assumes NEURON is installed.
