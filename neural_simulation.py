@@ -2,13 +2,17 @@
 '''
 Toy example to get transmembrane currents from axon
 '''
-import numpy as np
+import os
 from os.path import join
+import numpy as np
 import matplotlib
 matplotlib.use("AGG")
 import matplotlib.pyplot as plt
 import neuron
 import LFPy
+
+outfolder = "results"
+os.makedirs(outfolder, exist_ok=True)
 
 
 def return_cell():
@@ -48,7 +52,7 @@ def return_cell():
     return cell
 
 cell = return_cell()
-outfolder = "results"
+
 source_pos = np.array([cell.xmid, cell.ymid, cell.zmid]).T
 np.save(join(outfolder, "source_pos.npy"), source_pos)
 np.save(join(outfolder, "axon_imem.npy"), cell.imem)
