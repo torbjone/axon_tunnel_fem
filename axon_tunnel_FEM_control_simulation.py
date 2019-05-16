@@ -9,7 +9,7 @@ import dolfin as df
 
 eps = 1e-9
 
-# Define set up, corresponding to axon tunnel
+# Define set up, corresponding semi infinite homogeneous conductor, to be compared to known analytic solution
 dx_tunnel = 100.0  # um
 dy_tunnel = 100.0
 dz_tunnel = 100.0
@@ -22,9 +22,9 @@ x1 = x0 + dx_tunnel
 y1 = y0 + dy_tunnel
 z1 = z0 + dz_tunnel
 
-nx = 100  # Number of points in mesh. Larger number gives more accuracy, but is computationally demanding
-ny = 100
-nz = 100
+nx = 50  # Number of points in mesh. Larger number gives more accuracy, but is computationally demanding
+ny = 50
+nz = 50
 
 sigma = 0.3  # Extracellular conductivity (S/m)
 
@@ -35,8 +35,9 @@ fem_fig_folder = "fem_figs_control"
 [os.makedirs(f, exist_ok=True) for f in [out_folder, fem_fig_folder]]
 
 # example values for validation
-source_pos = np.array([0, 0, 20], [0, 0, 20])
-imem = np.array([[-1.], [1.0]])
+source_pos = np.array([[-5, 0, 5],
+                       [5, 0, 5]])
+imem = np.array([[-1.0], [1.0]])
 tvec = np.array([0.])
 num_tsteps = imem.shape[1]
 num_sources = source_pos.shape[0]
@@ -61,10 +62,10 @@ def plot_FEM_results(phi, t_idx):
     y = np.linspace(y0, y1, nz)
 
     mea_x_values = np.zeros(len(x))
-    # analytic = np.zeros(len(x))
+    analytic = np.zeros(len(x))
     for idx in range(len(x)):
         mea_x_values[idx] = phi(x[idx], 0, eps)
-        # analytic[idx] = analytic_mea(x[idx], 0, 1e-9)
+        analytic[idx] = analytic_mea(x[idx], 0, 1e-9)
 
     phi_plane_xz = np.zeros((len(x), len(z)))
     phi_plane_xy = np.zeros((len(x), len(z)))
@@ -89,7 +90,7 @@ def plot_FEM_results(phi, t_idx):
                           title='Transmembrane currents\n(x=0)')
 
     ax_imem_spatial = fig.add_subplot(512, xlabel=r'x [$\mu$m]', ylabel='nA',
-                                      ylim=[-imem_max, imem_max],
+                                      ylim=[-imem_max - 1, imem_max + 1],
                           title='Transmembrane currents across axon', xlim=[x0 - 5, x1 + 5])
 
     ax1 = fig.add_subplot(513, aspect=1, xlabel=r'x [$\mu$m]', ylabel=r'y [$\mu$m]',
@@ -99,7 +100,7 @@ def plot_FEM_results(phi, t_idx):
                           title='Potential cross section (y=0)')
 
     ax3 = fig.add_subplot(515, xlabel=r'x [$\mu$m]', ylabel='MEA potential (mV)',
-                          ylim=[-1.5, 1.5], xlim=[x0 - 5, x1 + 5])
+                          xlim=[x0 - 5, x1 + 5])
 
     #  Draw set up with tunnel and axon
     rect = mpatches.Rectangle([x0, z0], dx_tunnel, dz_tunnel, ec="k", fc='0.8')
@@ -112,15 +113,16 @@ def plot_FEM_results(phi, t_idx):
     ax_imem_spatial.plot(source_pos[:, 0], imem[:, t_idx])
 
     img1 = ax1.imshow(phi_plane_xy.T, interpolation='nearest', origin='lower', cmap='bwr',
-                      extent=(x[0], x[-1], y[0], y[-1]), vmax=1.5, vmin=-1.5)
+                      extent=(x[0], x[-1], y[0], y[-1]))
     img2 = ax2.imshow(phi_plane_xz.T, interpolation='nearest', origin='lower', cmap='bwr',
-                      extent=(x[0], x[-1], z[0], z[-1]), vmax=1.5, vmin=-1.5)
+                      extent=(x[0], x[-1], z[0], z[-1]))
 
     cax = fig.add_axes([0.95, 0.5, 0.01, 0.1])
 
     plt.colorbar(img1, cax=cax, label="mV")
     l, = ax3.plot(x, mea_x_values,  lw=2, c='k')
-
+    la, = ax3.plot(x, analytic,  lw=1, c='r', ls="--")
+    fig.legend([l, la], ["FEM", "Analytic semi-infinite"], frameon=False)
     plt.savefig(join(fem_fig_folder, 'results_{}_t_idx_{}.png'.format(sim_name, t_idx)))
 
 
