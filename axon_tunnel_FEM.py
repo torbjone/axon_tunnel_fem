@@ -121,7 +121,7 @@ def plot_FEM_results(phi, t_idx):
     plt.colorbar(img1, cax=cax, label="mV")
     l, = ax3.plot(x, mea_x_values,  lw=2, c='k')
 
-    plt.savefig(join(fem_fig_folder, 'results_{}_t_idx_{}.png'.format(sim_name, t_idx)))
+    plt.savefig(join(fem_fig_folder, 'results_{}_t_idx_{:04d}.png'.format(sim_name, t_idx)))
 
 
 def refine_mesh(mesh):
