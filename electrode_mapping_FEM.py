@@ -9,7 +9,8 @@ import dolfin as df
 
 eps = 1e-9
 
-dx_tunnel = 300.0
+# Define set up, corresponding to axon tunnel
+dx_tunnel = 300.0  # um
 dy_tunnel = 5.0
 dz_tunnel = 5.0
 
@@ -21,7 +22,7 @@ x1 = x0 + dx_tunnel
 y1 = y0 + dy_tunnel
 z1 = z0 + dz_tunnel
 
-nx = 300
+nx = 300  # Number of points in mesh. Larger number gives more accuracy, but is computationally demanding
 ny = 10
 nz = 10
 
@@ -33,12 +34,12 @@ sim_name = "tunnel_test"
 fem_fig_folder = "fem_figs"
 [os.makedirs(f, exist_ok=True) for f in [out_folder, fem_fig_folder]]
 
+# Loading results from neural simulation, from running "python neural_simulation.py" in terminal
 source_pos = np.load(join(out_folder, "source_pos.npy"))
 imem = np.load(join(out_folder, "axon_imem.npy"))
 tvec = np.load(join(out_folder, "axon_tvec.npy"))
 num_tsteps = imem.shape[1]
 num_sources = source_pos.shape[0]
-
 
 
 # def analytic_mea(x, y, z):
@@ -51,9 +52,8 @@ num_sources = source_pos.shape[0]
 #     return phi
 
 
-def plot_FEM_results(phi, elec):
-    """ Plot the set-up and potential at xz-plane,
-    as well as the potential in the center along the z-axis (depth)
+def plot_FEM_results(phi, t_idx):
+    """ Plot the set-up, transmembrane currents and electric potential
     """
 
     x = np.linspace(x0, x1, nx)
@@ -65,8 +65,6 @@ def plot_FEM_results(phi, elec):
     for idx in range(len(x)):
         mea_x_values[idx] = phi(x[idx], 0, eps)
         # analytic[idx] = analytic_mea(x[idx], 0, 1e-9)
-
-    # print(np.max(np.abs(mea_x_values - analytic)))
 
     phi_plane_xz = np.zeros((len(x), len(z)))
     phi_plane_xy = np.zeros((len(x), len(z)))
@@ -90,17 +88,17 @@ def plot_FEM_results(phi, elec):
                                     xlim=[0, tvec[-1]], ylim=[-imem_max, imem_max],
                           title='Transmembrane currents\n(x=0)')
 
-    ax_imem_spatial = fig.add_subplot(512, xlabel='x [$\mu$m]', ylabel='nA',
+    ax_imem_spatial = fig.add_subplot(512, xlabel=r'x [$\mu$m]', ylabel='nA',
                                       ylim=[-imem_max, imem_max],
                           title='Transmembrane currents across axon', xlim=[x0 - 5, x1 + 5])
 
-    ax1 = fig.add_subplot(513, aspect=1, xlabel='x [$\mu$m]', ylabel='y [$\mu$m]',
+    ax1 = fig.add_subplot(513, aspect=1, xlabel=r'x [$\mu$m]', ylabel=r'y [$\mu$m]',
                           title='Potential cross section (z=0)')
 
-    ax2 = fig.add_subplot(514, aspect=1, xlabel='x [$\mu$m]', ylabel='z [$\mu$m]',
+    ax2 = fig.add_subplot(514, aspect=1, xlabel=r'x [$\mu$m]', ylabel=r'z [$\mu$m]',
                           title='Potential cross section (y=0)')
 
-    ax3 = fig.add_subplot(515, xlabel='x [$\mu$m]', ylabel='MEA potential (mV)',
+    ax3 = fig.add_subplot(515, xlabel=r'x [$\mu$m]', ylabel='MEA potential (mV)',
                           ylim=[-1.5, 1.5], xlim=[x0 - 5, x1 + 5])
 
     #  Draw set up with tunnel and axon
@@ -123,8 +121,7 @@ def plot_FEM_results(phi, elec):
     plt.colorbar(img1, cax=cax, label="mV")
     l, = ax3.plot(x, mea_x_values,  lw=2, c='k')
 
-    plt.savefig(join(fem_fig_folder, 'results_{}_t_idx_{}.png'.format(sim_name, elec)))
-
+    plt.savefig(join(fem_fig_folder, 'results_{}_t_idx_{}.png'.format(sim_name, t_idx)))
 
 
 def refine_mesh(mesh):
@@ -143,18 +140,18 @@ def refine_mesh(mesh):
     mesh.smooth()
     return mesh
 
+
 # Create classes for defining parts of the boundaries and the interior
 # of the domain
 class LeftTunnel(df.SubDomain):
     def inside(self, x, on_boundary):
         return df.near(x[0], x0)
 
+
 class RightTunnel(df.SubDomain):
     def inside(self, x, on_boundary):
         return df.near(x[0], x1)
 
-
-# electrodes = np.arange(-50, 51, 5)#np.arange(-50, 51, 2)
 
 # Initialize sub-domain instances
 left = LeftTunnel()
@@ -166,29 +163,17 @@ mesh = df.BoxMesh(df.Point(x0, y0, z0), df.Point(x1, y1, z1), nx, ny, nz)
 print("Number of cells in mesh: ", mesh.num_cells())
 # mesh = refine_mesh(mesh)
 
-mesh_coordinates = mesh.coordinates()
-
-np.save(join(out_folder, "mesh_coordinates.npy"), mesh_coordinates)
-# np.save(join(out_folder, "electrodes.npy"), electrodes)
-
-
-# closest_idxs = np.ones(num_sources, dtype=int)
-# pos_errors = np.zeros(num_sources)
-# for s_idx, s_pos in enumerate(source_pos):
-#     closest_idxs[s_idx] = np.argmin(np.sum((mesh_coordinates - s_pos)**2, axis=1))
-#     pos_errors[s_idx] = np.sqrt(np.sum((mesh_coordinates[closest_idxs[s_idx]] - s_pos)**2))
-#     print(closest_idxs[s_idx], mesh_coordinates[closest_idxs[s_idx]], s_pos, pos_errors[s_idx])
+np.save(join(out_folder, "mesh_coordinates.npy"), mesh.coordinates())
 
 
 # Initialize mesh function for interior domains
 domains = df.MeshFunction("size_t", mesh, mesh.topology().dim())
 domains.set_all(0)
 
-# Initialize mesh function for boundary domains
+# Initialize mesh function for boundary domains.
 boundaries = df.MeshFunction("size_t", mesh, mesh.topology().dim()-1)
 boundaries.set_all(0)
-left.mark(boundaries, 1)
-# top.mark(boundaries, 2)
+left.mark(boundaries, 1)  # Mark ends of tunnel to enforce ground
 right.mark(boundaries, 1)
 
 
@@ -203,7 +188,8 @@ a = df.inner(sigma * df.grad(u), df.grad(v)) * dx
 
 # This corresponds to Neumann boundary conditions zero, i.e. all outer boundaries are insulating.
 L = df.Constant(0) * v * dx
-# Define Dirichlet boundary conditions at top and bottom boundaries
+
+# Define Dirichlet boundary conditions at left and right boundaries
 bcs = [df.DirichletBC(V, 0.0, boundaries, 1)]
 
 
@@ -216,7 +202,7 @@ for t_idx in range(num_tsteps):
 
     [bc.apply(A, b) for bc in bcs]
 
-    # Adding point source of magnitude 1.0
+    # Adding point sources from neural simulation
     for s_idx, s_pos in enumerate(source_pos):
 
         point = df.Point(s_pos[0], s_pos[1], s_pos[2])
@@ -225,11 +211,7 @@ for t_idx in range(num_tsteps):
 
     df.solve(A, phi.vector(), b, 'cg', "ilu")
 
-    df.File(join(out_folder, "phi_t_vec_{}.xml".format(t_idx))) << phi
-
-    # phi_sources = np.zeros(num_sources)
-
-    # np.save(join(out_folder, "phi_sources_elec_{}.npy".format(elec)), phi_sources)
+    # df.File(join(out_folder, "phi_t_vec_{}.xml".format(t_idx))) << phi
     np.save(join(out_folder, "phi_t_vec_{}.npy".format(t_idx)), phi.vector())
 
     plot_FEM_results(phi, t_idx)

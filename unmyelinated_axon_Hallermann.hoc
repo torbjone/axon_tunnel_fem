@@ -65,10 +65,6 @@ forall {
 
     length_constant_Kv_and_Kv1	=	80	//length constant of the exponential decay in um of Kv and Kv1
 
-
-
-
-
     insert ih
     gh_ih=-0.0002
     eh_ih=-45
