@@ -57,6 +57,9 @@ source_pos = np.array([cell.xmid, cell.ymid, cell.zmid]).T
 np.save(join(outfolder, "source_pos.npy"), source_pos)
 np.save(join(outfolder, "axon_imem.npy"), cell.imem)
 np.save(join(outfolder, "axon_tvec.npy"), cell.tvec)
+np.save(join(outfolder, "axon_vmem.npy"), cell.vmem)
+
+print(cell.imem.shape)
 
 max_vmem_t_idx = np.argmax(np.abs(cell.vmem[-1] - cell.vmem[0, 0]))
 max_imem_t_idx = np.argmax(np.abs(cell.imem[-1] - cell.imem[0, 0]))

@@ -29,9 +29,9 @@ nz = 10
 sigma = 0.3  # Extracellular conductivity (S/m)
 
 
-out_folder = 'results'
-sim_name = "tunnel_test"
-fem_fig_folder = "fem_figs"
+out_folder = 'results_remade'
+sim_name = "tunnel_test_remade"
+fem_fig_folder = "fem_figs_remade"
 [os.makedirs(f, exist_ok=True) for f in [out_folder, fem_fig_folder]]
 
 # Loading results from neural simulation, from running "python neural_simulation.py" in terminal
@@ -65,6 +65,8 @@ def plot_FEM_results(phi, t_idx):
     for idx in range(len(x)):
         mea_x_values[idx] = phi(x[idx], 0, eps)
         # analytic[idx] = analytic_mea(x[idx], 0, 1e-9)
+
+    np.save(join(out_folder, 'mea_x_values_{}_t_idx_{:04d}.npy'.format(sim_name, t_idx)), mea_x_values)
 
     phi_plane_xz = np.zeros((len(x), len(z)))
     phi_plane_xy = np.zeros((len(x), len(z)))
